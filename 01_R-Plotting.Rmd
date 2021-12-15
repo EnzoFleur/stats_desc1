@@ -1,0 +1,299 @@
+---
+title: "Plotting and Visualization in R"
+author: "Rochelle Terman"
+date: "Fall 2015"
+output: powerpoint_presentation
+---
+
+> "Make it informative, then make it pretty"
+
+# Plotting in R
+
+En R, il y a deux types d'outils principaux pour créer des graphes :
+  1. [base](#1-r-base-graphics), qui vient avec toutes les installations de R
+  2. [ggplot2](#2-ggplot2), a package à part entière
+  
+Ils en existent d'autres, mais celles-ci sont les plus populaires.
+
+### setup environment
+
+```{r}
+# remove all objects
+rm(list=ls())
+
+# set working directory
+setwd(dir="./")
+```
+
+### The dataset
+Pour les exemples à venir, nous allons charger le jeu de données "gapminder". Il recense des informations comme l'espérance de vie, le PIB, ..., par pays et années.
+
+```{r}
+dat <- read.csv("data/gapminder-FiveYearData.csv", stringsAsFactors = F)
+dat
+```
+
+# 1. R base graphics
+
+* Les appels de base ont cette forme là :
+
+```{r, eval=F}
+plot(x=)
+```
+```{r}
+# Si on trace un vecteur seul, R va supposer que l'indice de chacun des éléments constituent les abscisses.
+plot(x = dat$lifeExp) 
+```
+```{r}
+plot(x = dat$gdpPercap, y = dat$lifeExp)
+```
+
+### 1a. Scatter et line plots
+
+
+* L'argument "type" peut prendre les indicateurs suivants
+* "p" -- point/scatter plots (comportement par défaut)
+
+```{r, fig.cap=" "}
+plot(x = dat$gdpPercap, y = dat$lifeExp, type="p")
+```
+* "l" -- Une courbe
+
+```{r, fig.cap=" "}
+# Attention ! Line n'associe pas une courbe de régression, elle relie juste les points
+plot(x = dat$gdpPercap, y = dat$lifeExp, type="l") 
+
+```
+* "b" -- A la fois les lignes et les points
+
+```{r, fig.cap=" "}
+plot(x = dat$gdpPercap, y = dat$lifeExp, type="b") 
+```
+
+### 1b. Histogrammes et courbes de densité
+
+* Certains types de courbes requièrent d'autres arguments :
+* Ex) Histograms
+
+```{r, fig.cap=" "}
+hist(x=dat$lifeExp)
+hist(x=dat$lifeExp, breaks=5)
+hist(x=dat$lifeExp, breaks=10)
+```
+
+* Ex) Density plots
+
+```{r, fig.cap=" "}
+# Créer un objet "densité" (Attention à bien enlever les valeurs manquantes)
+age.density<-density(x=dat$lifeExp, na.rm=T)
+# Vérifier la classe de l'objet
+class(age.density)
+# Inspecter l'objet
+age.density 
+
+# Tracer l'objet densité
+plot(x=age.density)
+# Bande passante de 0.5
+plot(x=density(x=dat$lifeExp, bw=.5, na.rm=T))
+# Bande passante de 2
+plot(x=density(x=dat$lifeExp, bw=2, na.rm=T))
+# Bande passante de 6
+plot(x=density(x=dat$lifeExp, bw=6, na.rm=T)) 
+```
+
+### 1c. Titres et légendes
+
+* Utilisation basique avec titres et légendes
+
+```{r, eval=F}
+plot(x=, y=, type="", xlab="", ylab="", main="") 
+```
+
+* From the previous example
+
+```{r, fig.cap=" "}
+plot(x = dat$gdpPercap, y = dat$lifeExp, type="p", xlab="GDP per cap", ylab="Life Expectancy", main="Life Expectancy ~ GDP") # Add labels for axes and overall plot
+```
+# 2. ggplot2
+
+### 2a. Pourquoi ggplot?
+
+* Du code plus élégant et plus compact 
+*􏰀 Esthétiquement plus agréable 
+*􏰀 Très efficace pour l'exploration des données
+* Suit une grammaire définie
+* Défini chaque composante basique pour construire une phrase 
+
+
+### 2b. Grammaire
+
+L'appel général des fonctions ggplot se fait comme suit :
+
+```{r, eval=FALSE}
+ggplot(data=, aes(x=, y=), color=, size=,) + geom_xxxx()+geom_yyyy()
+```
+
+La *grammaire* implique des briques basiques :
+
+1. **Data**: une data.frame
+2. **Aes**thetics: Comment les données sont représentées visuellement. Un mapping entre les variables de chaque axe, les couleurs, tailles, formes, etc.
+3. **Geom**etry: Les objets géométriques sur le graphe : points, lignes, polygones, etc.
+
+La clé pour comprendre ggplot2 est de penser le graphe en couches : comme pour l'édition d'image sur Photoshop ou Illustrator.
+
+Passons aux exemples : 
+
+```{r}
+library(ggplot2)
+ggplot(data = dat, aes(x = gdpPercap, y = lifeExp)) +
+  geom_point()
+```
+L'appel à ggplot simplement ne suffit pas à dessiner une figure :
+
+```{r}
+ggplot(data = dat, aes(x = gdpPercap, y = lifeExp))
+```
+
+Il faut lui préciser comment nous voulons représenter les données :
+
+```{r}
+ggplot(data = dat, aes(x = gdpPercap, y = lifeExp)) + geom_point()
+
+# same as
+my_plot <- ggplot(data = dat, aes(x = gdpPercap, y = lifeExp))
+my_plot + geom_point()
+```
+
+### 2c. Anatomie d'`aes`
+
+La fonction aes gère aussi la couleur : on peut lui préciser une des colonnes des données pour en faire des facteurs :
+
+```{r}
+ggplot(data = dat, aes(x = gdpPercap, y = lifeExp, color=continent)) + geom_point()
+```
+
+**Color** n'est pas le seul argument sur lequel nous pouvons jouer dans aes : également la taille, la forme, ...
+
+```{r, eval=FALSE}
+ggplot(data=, aes(x=, y=, by =, color=, linetype=, shape=, size=))
+```
+
+### 2d. Layers
+
+Pour représenter l'évolution de l'espérance de vie avec le temps, une courbe serait plus judicieuse qu'un point :
+```{r}
+ggplot(data = dat, aes(x=year, y=lifeExp, by=country, color=continent)) + geom_line()
+```
+
+Mais cumuler les deux couches est aussi possible :
+
+```{r}
+ggplot(data = dat, aes(x=year, y=lifeExp, by=country, color=continent)) + geom_line() + geom_point()
+```
+
+Et chaque couche peut avoir ses paramètres aes :
+```{r}
+ggplot(data = dat, aes(x=year, y=lifeExp, by=country)) + geom_line(aes(color=continent)) + geom_point()
+```
+
+### 2e. Titres et légendes 
+
+Les titres et légendes sont considérées comme des couches à part entière dans ggplot :
+
+```{r}
+# add x and y axis labels
+ggplot(data = dat, aes(x = gdpPercap, y = lifeExp, color=continent)) + geom_point() + xlab("GDP per capita") + ylab("Life Expectancy") + ggtitle("My fancy graph")
+```
+
+De même que les échelles :
+
+```{r}
+# limit x axis from 1,000 to 20,000
+ggplot(data = dat, aes(x = gdpPercap, y = lifeExp, color=continent)) + geom_point() + xlab("GDP per capita") + ylab("Life Expectancy") + ggtitle("My fancy graph") + xlim(1000, 20000)
+```
+
+### 2f. Transformations et Stats
+
+Avec ggplot permet d'appliquer facilement des modèles statistiques sur les données :
+
+```{r}
+ggplot(data = dat, aes(x = gdpPercap, y = lifeExp, color=continent)) + geom_point()
+```
+
+On peut par exemple changer l'échelle des abscisses pour passer en échelle log :
+
+```{r}
+ggplot(data = dat, aes(x = gdpPercap, y = lifeExp, color=continent)) + geom_point() + scale_x_log10()
+```
+
+Ici, une relation linéaire entre l'espérance de vie et le PIB par habitant semble être intéressante.
+On peut ajouter une relation simple en ajoutant une couche , `geom_smmoth`:
+
+```{r}
+ggplot(data = dat, aes(x = gdpPercap, y = lifeExp, color=continent)) + geom_point() + scale_x_log10() + geom_smooth(method="lm")
+```
+
+
+```{r}
+ggplot(data = dat, aes(x = gdpPercap, y = lifeExp)) + geom_point(aes(color=continent)) + scale_x_log10() + geom_smooth(method="lm")
+```
+
+### 2g. Facets
+
+Précédemment, on a vu l'évolution de l'espérance de vie avec le temps sur tous les pays sur un graphe. Il est aussi possible de séparer chaque pays en ajoutant une couche **facet** :
+
+```{r}
+ggplot(data = dat[dat$country %in% c('France', 'China', 'Peru'),], aes(x = year, y = lifeExp, color=continent)) +
+  geom_line() + facet_wrap( ~ country)
+```
+
+### 2h. Putting it all together
+
+Ceci n'est qu'une mise en bouche ! Rstudio fournit une [cheat sheet](https://www.rstudio.com/wp-content/uploads/2015/03/ggplot2-cheatsheet.pdf) très exhaustive et claire de toutes les couches disponibles sur ggplot2.
+Il y a forcément quelqu'un qui a essayé de tracer la même courbe que vous avant et l'a demandé à google, donc n'hésitez pas à chercher un peu si il le faut.
+
+**bar plots**
+
+```{r}
+# count of lifeExp bins
+ggplot(data = dat, aes(x = lifeExp)) + geom_bar(stat="bin")
+
+# with color representing regions
+ggplot(data = dat, aes(x = lifeExp, fill = continent)) + geom_bar(stat="bin")
+```
+
+**box plots**
+
+```{r}
+ggplot(data = dat, aes(x = continent, y = lifeExp)) + geom_boxplot()
+```
+###. Exporting
+
+Two basic image types
+
+1) **Raster/Bitmap** (.png, .jpeg)
+
+Every pixel of a plot contains its own separate coding; not so great if you want to resize the image
+
+```{r, eval=FALSE}
+jpeg(filename="example.png", width=, height=)
+plot(x,y)
+dev.off()
+```
+
+2) **Vector** (.pdf, .ps)
+
+Every element of a plot is encoded with a function that gives its coding conditional on several factors; great for resizing
+
+```{r, eval=FALSE}
+pdf(filename="example.pdf", width=, height=)
+plot(x,y)
+dev.off()
+```
+
+**Exporting with ggplot**
+
+```{r, eval=FALSE}
+# Assume we saved our plot is an object called example.plot
+ggsave(filename="example.pdf", plot=example.plot, scale=, width=, height=)
+```
